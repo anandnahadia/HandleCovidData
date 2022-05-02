@@ -132,7 +132,7 @@ func main() {
 	e.GET("/covidData", covidData)
 	//access swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.Start(":8080"))
 
 }
 
