@@ -1,6 +1,7 @@
 module github.com/anandnahadia/HandleCovidData
-// +heroku goVersion go1.17
-go 1.17
+
+// +heroku goVersion go1.16
+go 1.16
 
 require (
 	github.com/go-kit/log v0.2.0
