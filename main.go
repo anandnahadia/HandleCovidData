@@ -133,7 +133,8 @@ func main() {
 	e.GET("/covidData", covidData)
 	//access swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	e.Logger.Fatal(e.Start(":8080"))
+	port := os.Getenv("PORT")
+	e.Logger.Fatal(e.Start(port))
 
 }
 
