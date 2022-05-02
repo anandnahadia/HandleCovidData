@@ -4,14 +4,30 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"reflect"
 	"time"
 
-	"github.com/anandnahadia0@gmail.com/HandleCovidData/models/covidData"
+	_ "github.com/anandnahadia/HandleCovidData/docs"
+	"github.com/anandnahadia/HandleCovidData/internal/helper"
+	kitlog "github.com/go-kit/log"
+	"github.com/go-redis/redis"
 	"github.com/labstack/echo/v4"
+	"github.com/swaggo/echo-swagger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
+
+var col *mongo.Collection
+var redisClient *redis.Client
+
+// swagger:parameters CoordinatesInput
+type CoordinatesInput struct {
+	// Latitude that identifies Latitude.
+	// in: query
+	GeoCoordinates string `json:"coordinates"`
+}
 
 // This is a user defined method to close resources.
 // This method closes mongoDB connection and cancel context.
@@ -33,26 +49,6 @@ func close(client *mongo.Client, ctx context.Context,
 	}()
 }
 
-// This is a user defined method that returns mongo.Client,
-// context.Context, context.CancelFunc and error.
-// mongo.Client will be used for further database operation.
-// context.Context will be used set deadlines for process.
-// context.CancelFunc will be used to cancel context and
-// resource associated with it.
-
-func connect(uri string) (*mongo.Client, context.Context,
-	context.CancelFunc, error) {
-
-	// ctx will be used to set deadline for process, here
-	// deadline will of 30 seconds.
-	ctx, cancel := context.WithTimeout(context.Background(),
-		30*time.Second)
-
-	// mongo.Connect return mongo.Client method
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
-	return client, ctx, cancel, err
-}
-
 // This is a user defined method that accepts
 // mongo.Client and context.Context
 // This method used to ping the mongoDB, return error if any.
@@ -68,35 +64,108 @@ func ping(client *mongo.Client, ctx context.Context) error {
 	fmt.Println("connected successfully")
 	return nil
 }
-func main() {
-	client, ctx, cancel, err := connect("mongodb://localhost:27017")
+
+//initMongoDb starts mongodb connection
+func initMongoDb() {
+	//start mongodb connection
+	clientOptions := options.Client().
+		ApplyURI("mongodb://anand:Anand1998@cluster0-shard-00-00.ayqy0.mongodb.net:27017,cluster0-shard-00-01.ayqy0.mongodb.net:27017,cluster0-shard-00-02.ayqy0.mongodb.net:27017/testing?ssl=true&replicaSet=atlas-y6q7zl-shard-0&authSource=admin&retryWrites=true&w=majority")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
+	client, err := mongo.Connect(ctx, clientOptions)
+	// client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		panic(err)
 	}
-
+	col = client.Database("testing").Collection("covidData")
+	fmt.Println("Collection type:", reflect.TypeOf(col))
 	// Release resource when the main
 	// function is returned.
 	defer close(client, ctx, cancel)
-
 	// Ping mongoDB with Ping method
 	ping(client, ctx)
-	e := echo.New()
-	e.GET("/updateCovidCases", updateCovidCases)
-	e.GET("/covidData", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
+}
+
+//initRedis connects redis
+func initRedis() {
+	//Redis Server
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
 	})
+
+	pong, err := redisClient.Ping().Result()
+	fmt.Println(pong, err)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// @title Echo Swagger Example API
+// @version 1.0
+// @description This is a sample server server.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:1323
+// @BasePath /
+// @schemes http
+func main() {
+
+	initMongoDb()
+	initRedis()
+
+	e := echo.New()
+	//api to update covid cases in mongodb
+	e.GET("/updateCovidCases", updateCovidCases)
+	//api to get covid case of a state using geocoordinates
+	e.GET("/covidData", covidData)
+	//access swagger
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.Logger.Fatal(e.Start(":1323"))
 
 }
+
+// @Summary update covid cases in mongodb.
+// @Description update covid cases in mongodb.
+// @Tags root
+// @Accept */*
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /updateCovidCases [get]
 func updateCovidCases(c echo.Context) error {
-	var covidData covidData.CovidData
-	err := covidData.updateCovidCases(echo.Logger)
+	logger := kitlog.NewJSONLogger(kitlog.NewSyncWriter(os.Stdout))
+	err := helper.UpdateStatesCovidData(logger, col)
 	if err != nil {
 		return c.String(404, err.Error())
 	}
-	return c.String(http.StatusOK, "Hello, World!")
+	return c.String(http.StatusOK, "Covid Data is Updated in Database")
 }
 
-type result struct {
-	Message string `json:"message"`
+// @Summary get state covid cases.
+// @Description get state covid cases.
+// @Tags root
+// @Param input query CoordinatesInput true "No Comments"
+// @Accept */*
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /covidData [get]
+func covidData(c echo.Context) error {
+	logger := kitlog.NewJSONLogger(kitlog.NewSyncWriter(os.Stdout))
+	coordinates := c.QueryParam("coordinates")
+	if coordinates == "" {
+		return c.String(400, "enter geo coordinates")
+	}
+	covidDataResponse, err := helper.GetCovidData(logger, coordinates, col, redisClient)
+	if err != nil {
+		return c.String(400, err.Error())
+	}
+	return c.JSON(http.StatusOK, covidDataResponse)
 }

@@ -1,0 +1,63 @@
+basePath: /
+host: localhost:1323
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Echo Swagger Example API
+  version: "1.0"
+paths:
+  /covidData:
+    get:
+      consumes:
+      - '*/*'
+      description: get state covid cases.
+      parameters:
+      - description: |-
+          Latitude that identifies Latitude.
+          in: query
+        in: query
+        name: latitude
+        type: string
+      - description: |-
+          longitude that identifies longitude.
+          in: query
+        in: query
+        name: longitude
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: get state covid cases.
+      tags:
+      - root
+  /updateCovidCases:
+    get:
+      consumes:
+      - '*/*'
+      description: update covid cases in mongodb.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: update covid cases in mongodb.
+      tags:
+      - root
+schemes:
+- http
+swagger: "2.0"
