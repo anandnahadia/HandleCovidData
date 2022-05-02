@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/anandnahadia/HandleCovidData/docs"
@@ -24,8 +26,8 @@ var redisClient *redis.Client
 
 // swagger:parameters CoordinatesInput
 type CoordinatesInput struct {
-	// Latitude that identifies Latitude.
-	// in: query
+	// Enter Geocoordinates Latitude,Longitude.
+	// eg - 23.341310,72.578284
 	GeoCoordinates string `json:"coordinates"`
 }
 
@@ -66,7 +68,7 @@ func ping(client *mongo.Client, ctx context.Context) error {
 }
 
 //initMongoDb starts mongodb connection
-func initMongoDb() {
+func initMongoDb() (*mongo.Client, context.Context, context.CancelFunc) {
 	//start mongodb connection
 	clientOptions := options.Client().
 		ApplyURI("mongodb://anand:Anand1998@cluster0-shard-00-00.ayqy0.mongodb.net:27017,cluster0-shard-00-01.ayqy0.mongodb.net:27017,cluster0-shard-00-02.ayqy0.mongodb.net:27017/testing?ssl=true&replicaSet=atlas-y6q7zl-shard-0&authSource=admin&retryWrites=true&w=majority")
@@ -79,11 +81,10 @@ func initMongoDb() {
 	}
 	col = client.Database("testing").Collection("covidData")
 	fmt.Println("Collection type:", reflect.TypeOf(col))
-	// Release resource when the main
-	// function is returned.
-	defer close(client, ctx, cancel)
+
 	// Ping mongoDB with Ping method
 	ping(client, ctx)
+	return client, ctx, cancel
 }
 
 //initRedis connects redis
@@ -119,9 +120,11 @@ func initRedis() {
 // @schemes http
 func main() {
 
-	initMongoDb()
-	initRedis()
-
+	client, ctx, cancel := initMongoDb()
+	// initRedis()
+	// Release resource when the main
+	// function is returned.
+	defer close(client, ctx, cancel)
 	e := echo.New()
 	//api to update covid cases in mongodb
 	e.GET("/updateCovidCases", updateCovidCases)
@@ -161,7 +164,16 @@ func covidData(c echo.Context) error {
 	logger := kitlog.NewJSONLogger(kitlog.NewSyncWriter(os.Stdout))
 	coordinates := c.QueryParam("coordinates")
 	if coordinates == "" {
-		return c.String(400, "enter geo coordinates")
+		return c.String(400, "Enter geo coordinates")
+	}
+	coordinatesArray := strings.Split(coordinates, ",")
+	if len(coordinatesArray) != 2 {
+		return c.String(400, "Incorrect coordinates. Try 23.341310,72.578284")
+	}
+	for _, val := range coordinatesArray {
+		if _, err := strconv.ParseFloat(val, 64); err != nil {
+			return c.String(400, "Incorrect coordinates. Try 23.341310,72.578284")
+		}
 	}
 	covidDataResponse, err := helper.GetCovidData(logger, coordinates, col, redisClient)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -94,18 +95,20 @@ func GetCovidData(logger kitlog.Logger, coordinates string, col *mongo.Collectio
 	decoder.Decode(&responseDetails)
 	level.Info(logger).Log("Response", responseDetails)
 	responseData := responseDetails.Data[0]
-
-	//Check Data in Cache
-	val, err := redisClient.Get(responseData.RegionCode).Result()
-	if err == nil {
-		err = json.Unmarshal([]byte(val), &res)
-		if err != nil {
-			return nil, err
-		}
-		if val != "" {
-			return &res, nil
-		}
+	if responseData.Country != "India" {
+		return nil, errors.New("please enter coordinates within india")
 	}
+	//Check Data in Cache
+	// val, err := redisClient.Get(responseData.RegionCode).Result()
+	// if err == nil {
+	// 	err = json.Unmarshal([]byte(val), &res)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if val != "" {
+	// 		return &res, nil
+	// 	}
+	// }
 
 	//get document from mongodb
 	var podcast bson.M
@@ -155,13 +158,13 @@ func GetCovidData(logger kitlog.Logger, coordinates string, col *mongo.Collectio
 	}
 	res.IndiaCovidCases = totalCases
 	//Cache Data for 30 minutes
-	redisData, err := json.Marshal(res)
-	if err != nil {
-		return nil, err
-	}
-	err = redisClient.Set(responseData.RegionCode, redisData, 30*time.Minute).Err()
-	if err != nil {
-		return nil, err
-	}
+	// redisData, err := json.Marshal(res)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = redisClient.Set(responseData.RegionCode, redisData, 30*time.Minute).Err()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return &res, nil
 }

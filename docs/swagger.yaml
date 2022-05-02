@@ -20,16 +20,10 @@ paths:
       description: get state covid cases.
       parameters:
       - description: |-
-          Latitude that identifies Latitude.
-          in: query
+          Enter Geocoordinates Latitude,Longitude.
+          eg - 23.341310,72.578284
         in: query
-        name: latitude
-        type: string
-      - description: |-
-          longitude that identifies longitude.
-          in: query
-        in: query
-        name: longitude
+        name: coordinates
         type: string
       produces:
       - application/json

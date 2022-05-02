@@ -41,14 +41,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Latitude that identifies Latitude.\nin: query",
-                        "name": "latitude",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "longitude that identifies longitude.\nin: query",
-                        "name": "longitude",
+                        "description": "Enter Geocoordinates Latitude,Longitude.\neg - 23.341310,72.578284",
+                        "name": "coordinates",
                         "in": "query"
                     }
                 ],
