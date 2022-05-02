@@ -134,7 +134,7 @@ func main() {
 	//access swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	port := os.Getenv("PORT")
-	e.Logger.Fatal(e.Start(port))
+	e.Logger.Fatal(e.Start(":" + port))
 
 }
 
