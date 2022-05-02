@@ -126,7 +126,7 @@ func main() {
 	// function is returned.
 	defer close(client, ctx, cancel)
 	e := echo.New()
-	e.GET("/", updateCovidCases)
+	e.GET("/", echoSwagger.WrapHandler)
 	//api to update covid cases in mongodb
 	e.GET("/updateCovidCases", updateCovidCases)
 	//api to get covid case of a state using geocoordinates
