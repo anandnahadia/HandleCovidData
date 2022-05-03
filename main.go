@@ -15,7 +15,8 @@ import (
 	kitlog "github.com/go-kit/log"
 	"github.com/go-redis/redis"
 	"github.com/labstack/echo/v4"
-	"github.com/swaggo/echo-swagger"
+	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -126,14 +127,17 @@ func main() {
 	// function is returned.
 	defer close(client, ctx, cancel)
 	e := echo.New()
+	e.Use(middleware.CORS())
+	e.GET("/index.html", echoSwagger.WrapHandler)
 	//api to update covid cases in mongodb
 	e.GET("/updateCovidCases", updateCovidCases)
 	//api to get covid case of a state using geocoordinates
 	e.GET("/covidData", covidData)
 	//access swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	e.Logger.Fatal(e.Start(":1323"))
 
+	port := os.Getenv("PORT")
+	e.Logger.Fatal(e.Start(":" + port))
 }
 
 // @Summary update covid cases in mongodb.

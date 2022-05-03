@@ -132,7 +132,7 @@ func GetCovidData(logger kitlog.Logger, coordinates string, col *mongo.Collectio
 			}
 			log.Println("id", id)
 			time1, _ := strconv.ParseInt(id[0:8], 16, 0)
-			tm := time.Unix(time1, 0).Format("2006-01-02 15:04:05")
+			tm := time.Unix(time1, 0).Add(330 * time.Minute).Format("2006-01-02 15:04:05")
 			res.LastUpdateTime = fmt.Sprint(tm)
 
 		}
